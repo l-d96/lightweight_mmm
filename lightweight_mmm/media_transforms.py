@@ -114,6 +114,24 @@ def hill(data: jnp.ndarray, half_max_effective_concentration: jnp.ndarray,
       data=data / half_max_effective_concentration, exponent=-slope)
   return jnp.where(save_transform == 0, x=0, y=1. / (1 + save_transform))
 
+@jax.jit
+def exponential(data: jnp.ndarray, slope: jnp.ndarray) -> jnp.ndarray:
+  """Calculates the hill function for a given array of values.
+
+  Refer to the following link for detailed information on this equation:
+    https://en.wikipedia.org/wiki/Hill_equation_(biochemistry)
+
+  Args:
+    data: Input data.
+    half_max_effective_concentration: ec50 value for the hill function.
+    slope: Slope of the hill function.
+
+  Returns:
+    The hill values for the respective input data.
+  """
+  exponent = jnp.where(slope == 0, x=0, y=- data / slope)
+  save_transform = jnp.exp(exponent)
+  return 1 - save_transform
 
 @functools.partial(jax.vmap, in_axes=(1, 1, None), out_axes=1)
 def _carryover_convolve(data: jnp.ndarray,
