@@ -129,7 +129,7 @@ def exponential(data: jnp.ndarray, slope: jnp.ndarray) -> jnp.ndarray:
   Returns:
     The hill values for the respective input data.
   """
-  exponent = jnp.where(slope == 0, x=0, y=- data / slope)
+  exponent = jnp.where(slope < 0, x=0, y=- data / slope)
   save_transform = jnp.exp(exponent)
   return 1 - save_transform
 
