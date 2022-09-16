@@ -87,7 +87,9 @@ TRANSFORM_PRIORS_NAMES = immutabledict.immutabledict({
     "adstock":
         frozenset((_EXPONENT, _LAG_WEIGHT)),
     "hill_adstock":
-        frozenset((_LAG_WEIGHT, _HALF_MAX_EFFECTIVE_CONCENTRATION, _SLOPE))
+        frozenset((_LAG_WEIGHT, _HALF_MAX_EFFECTIVE_CONCENTRATION, _SLOPE)),
+    "exponential_adstock":
+        frozenset((_LAG_WEIGHT, _SLOPE))
 })
 
 GEO_ONLY_PRIORS = frozenset((_COEF_SEASONALITY,))
@@ -132,6 +134,13 @@ def _get_transform_default_priors() -> Mapping[str, Prior]:
                   dist.Beta(concentration1=2., concentration0=1.),
               _HALF_MAX_EFFECTIVE_CONCENTRATION:
                   dist.Gamma(concentration=1., rate=1.),
+              _SLOPE:
+                  dist.Gamma(concentration=1., rate=1.)
+          }),
+      "exponential_adstock":
+          immutabledict.immutabledict({
+              _LAG_WEIGHT:
+                  dist.Beta(concentration1=2., concentration0=1.),
               _SLOPE:
                   dist.Gamma(concentration=1., rate=1.)
           })
@@ -229,6 +238,44 @@ def transform_hill_adstock(media_data: jnp.ndarray,
       half_max_effective_concentration=half_max_effective_concentration,
       slope=slope)
 
+def transform_exponential_adstock(media_data: jnp.ndarray,
+                           custom_priors: MutableMapping[str, Prior],
+                           normalise: bool = True) -> jnp.ndarray:
+  """Transforms the input data with the adstock and hill functions.
+
+  Args:
+    media_data: Media data to be transformed. It is expected to have 2 dims for
+      national models and 3 for geo models.
+    custom_priors: The custom priors we want the model to take instead of the
+      default ones. The possible names of parameters for hill_adstock and
+      exponent are "lag_weight", "half_max_effective_concentration" and "slope".
+    normalise: Whether to normalise the output values.
+
+  Returns:
+    The transformed media data.
+  """
+  transform_default_priors = _get_transform_default_priors()["exponential_adstock"]
+  with numpyro.plate(name=f"{_LAG_WEIGHT}_plate",
+                     size=media_data.shape[1]):
+    lag_weight = numpyro.sample(
+        name=_LAG_WEIGHT,
+        fn=custom_priors.get(_LAG_WEIGHT,
+                             transform_default_priors[_LAG_WEIGHT]))
+
+  with numpyro.plate(name=f"{_SLOPE}_plate",
+                     size=media_data.shape[1]):
+    slope = numpyro.sample(
+        name=_SLOPE,
+        fn=custom_priors.get(_SLOPE, transform_default_priors[_SLOPE]))
+
+  if media_data.ndim == 3:
+    lag_weight = jnp.expand_dims(lag_weight, axis=-1)
+    slope = jnp.expand_dims(slope, axis=-1)
+
+  return media_transforms.exponential(
+      data=media_transforms.adstock(
+          data=media_data, lag_weight=lag_weight, normalise=normalise),
+      slope=slope)
 
 def transform_carryover(media_data: jnp.ndarray,
                         custom_priors: MutableMapping[str, Prior],
