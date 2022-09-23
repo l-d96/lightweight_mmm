@@ -331,6 +331,7 @@ def media_mix_model(
     media_data: jnp.ndarray,
     target_data: jnp.ndarray,
     media_prior: jnp.ndarray,
+    sigma: jnp.ndarray,
     degrees_seasonality: int,
     frequency: int,
     transform_function: TransformFunction,
@@ -394,14 +395,14 @@ def media_mix_model(
       dim=-2 if media_data.ndim == 3 else -1):
     coef_media = numpyro.sample(
         name="channel_coef_media" if media_data.ndim == 3 else "coef_media",
-        fn=dist.HalfNormal(scale=media_prior))
+        fn=dist.Normal(loc=media_prior, scale=sigma))
     if media_data.ndim == 3:
       with numpyro.plate(
           name="geo_media_plate",
           size=n_geos,
           dim=-1):
         coef_media = numpyro.sample(
-            name="coef_media", fn=dist.HalfNormal(scale=coef_media))
+            name="coef_media", fn=dist.HalfNormal(loc=media_prior, scale=sigma))
 
   with numpyro.plate(name=f"{_GAMMA_SEASONALITY}_sin_cos_plate", size=2):
     with numpyro.plate(name=f"{_GAMMA_SEASONALITY}_plate",
