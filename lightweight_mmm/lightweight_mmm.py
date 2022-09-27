@@ -257,7 +257,7 @@ class LightweightMMM:
       self,
       media: jnp.ndarray,
       media_prior: jnp.ndarray,
-      sigma: jnp.ndarray,
+      media_sigma: jnp.ndarray,
       target: jnp.ndarray,
       extra_features: Optional[jnp.ndarray] = None,
       degrees_seasonality: int = 2,
@@ -367,7 +367,7 @@ class LightweightMMM:
         extra_features=extra_features,
         target_data=jnp.array(target),
         media_prior=jnp.array(media_prior),
-        sigma=jnp.array(sigma),
+        media_sigma=jnp.array(media_sigma),
         degrees_seasonality=degrees_seasonality,
         frequency=seasonality_frequency,
         transform_function=self._model_transform_function,
@@ -382,7 +382,7 @@ class LightweightMMM:
     self.n_media_channels = media.shape[1]
     self.n_geos = media.shape[2] if media.ndim == 3 else 1
     self._media_prior = media_prior
-    self._sigma = sigma
+    self._media_sigma = media_sigma
     self.trace = mcmc.get_samples()
     self._number_warmup = number_warmup
     self._number_samples = number_samples
@@ -414,7 +414,7 @@ class LightweightMMM:
       media_data: jnp.ndarray,
       extra_features: Optional[jnp.ndarray],
       media_prior: jnp.ndarray,
-      sigma: jnp.ndarray,
+      media_sigma: jnp.ndarray,
       degrees_seasonality: int, frequency: int,
       transform_function: Callable[[Any], jnp.ndarray],
       weekday_seasonality: bool,
@@ -450,7 +450,7 @@ class LightweightMMM:
             media_data=media_data,
             extra_features=extra_features,
             media_prior=media_prior,
-            sigma=sigma,
+            media_sigma=media_sigma,
             target_data=None,
             degrees_seasonality=degrees_seasonality,
             frequency=frequency,
@@ -527,7 +527,7 @@ class LightweightMMM:
         media_data=full_media,
         extra_features=full_extra_features,
         media_prior=jnp.array(self._media_prior),
-        sigma=jnp.array(self._sigma),
+        media_sigma=jnp.array(self._media_sigma),
         degrees_seasonality=self._degrees_seasonality,
         frequency=self._seasonality_frequency,
         weekday_seasonality=self._weekday_seasonality,
