@@ -402,7 +402,7 @@ def media_mix_model(
           size=n_geos,
           dim=-1):
         coef_media = numpyro.sample(
-            name="coef_media", fn=dist.HalfNormal(loc=media_prior, scale=sigma))
+            name="coef_media", fn=dist.Normal(loc=media_prior, scale=sigma))
 
   with numpyro.plate(name=f"{_GAMMA_SEASONALITY}_sin_cos_plate", size=2):
     with numpyro.plate(name=f"{_GAMMA_SEASONALITY}_plate",
