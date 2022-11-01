@@ -324,13 +324,6 @@ class LightweightMMM:
             not_used_custom_priors)
       custom_priors = self._preprocess_custom_priors(
           custom_priors=custom_priors)
-      geo_custom_priors = set(custom_priors.keys()).intersection(
-          models.GEO_ONLY_PRIORS)
-      if media.ndim == 2 and geo_custom_priors:
-        raise ValueError(
-            "The given data is for national models but custom_prior contains "
-            "priors for the geo version of the model. Please either remove geo "
-            "priors for national model or pass media data with geo dimension.")
     else:
       custom_priors = {}
 
