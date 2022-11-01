@@ -57,22 +57,14 @@ class TransformFunction(Protocol):
 
 _INTERCEPT = "intercept"
 _COEF_TREND = "coef_trend"
-_EXPO_TREND = "expo_trend"
 _SIGMA = "sigma"
-_GAMMA_SEASONALITY = "gamma_seasonality"
-_WEEKDAY = "weekday"
 _COEF_EXTRA_FEATURES = "coef_extra_features"
-_COEF_SEASONALITY = "coef_seasonality"
 
 MODEL_PRIORS_NAMES = frozenset((
     _INTERCEPT,
     _COEF_TREND,
-    _EXPO_TREND,
     _SIGMA,
-    _GAMMA_SEASONALITY,
-    _WEEKDAY,
-    _COEF_EXTRA_FEATURES,
-    _COEF_SEASONALITY))
+    _COEF_EXTRA_FEATURES))
 
 _EXPONENT = "exponent"
 _LAG_WEIGHT = "lag_weight"
@@ -92,8 +84,6 @@ TRANSFORM_PRIORS_NAMES = immutabledict.immutabledict({
         frozenset((_LAG_WEIGHT, _SLOPE))
 })
 
-GEO_ONLY_PRIORS = frozenset((_COEF_SEASONALITY,))
-
 
 def _get_default_priors() -> Mapping[str, Prior]:
   # Since JAX cannot be called before absl.app.run in tests we get default
@@ -101,12 +91,8 @@ def _get_default_priors() -> Mapping[str, Prior]:
   return immutabledict.immutabledict({
       _INTERCEPT: dist.HalfNormal(scale=2.),
       _COEF_TREND: dist.Normal(loc=0., scale=1.),
-      _EXPO_TREND: dist.Uniform(low=0.5, high=1.5),
       _SIGMA: dist.Gamma(concentration=1., rate=1.),
-      _GAMMA_SEASONALITY: dist.Normal(loc=0., scale=1.),
-      _WEEKDAY: dist.Normal(loc=0., scale=.5),
       _COEF_EXTRA_FEATURES: dist.Normal(loc=0., scale=1.),
-      _COEF_SEASONALITY: dist.HalfNormal(scale=.5)
   })
 
 
@@ -332,12 +318,9 @@ def media_mix_model(
     target_data: jnp.ndarray,
     media_prior: jnp.ndarray,
     media_sigma: jnp.ndarray,
-    degrees_seasonality: int,
-    frequency: int,
     transform_function: TransformFunction,
     custom_priors: MutableMapping[str, Prior],
     transform_kwargs: Optional[MutableMapping[str, Any]] = None,
-    weekday_seasonality: bool = False,
     extra_features: Optional[jnp.array] = None
     ) -> None:
   """Media mix model.
@@ -378,17 +361,6 @@ def media_mix_model(
         name=_SIGMA,
         fn=custom_priors.get(_SIGMA, default_priors[_SIGMA]))
 
-  # TODO(): Force all geos to have the same trend sign.
-  with numpyro.plate(name=f"{_COEF_TREND}_plate", size=n_geos):
-    coef_trend = numpyro.sample(
-        name=_COEF_TREND,
-        fn=custom_priors.get(_COEF_TREND, default_priors[_COEF_TREND]))
-
-  expo_trend = numpyro.sample(
-      name=_EXPO_TREND,
-      fn=custom_priors.get(
-          _EXPO_TREND, default_priors[_EXPO_TREND]))
-
   with numpyro.plate(
       name="channel_media_plate",
       size=n_channels,
@@ -404,54 +376,14 @@ def media_mix_model(
         coef_media = numpyro.sample(
             name="coef_media", fn=dist.Normal(loc=media_prior, scale=media_sigma))
 
-  with numpyro.plate(name=f"{_GAMMA_SEASONALITY}_sin_cos_plate", size=2):
-    with numpyro.plate(name=f"{_GAMMA_SEASONALITY}_plate",
-                       size=degrees_seasonality):
-      gamma_seasonality = numpyro.sample(
-          name=_GAMMA_SEASONALITY,
-          fn=custom_priors.get(
-              _GAMMA_SEASONALITY, default_priors[_GAMMA_SEASONALITY]))
-
-  if weekday_seasonality:
-    with numpyro.plate(name=f"{_WEEKDAY}_plate", size=7):
-      weekday = numpyro.sample(
-          name=_WEEKDAY,
-          fn=custom_priors.get(_WEEKDAY, default_priors[_WEEKDAY]))
-    weekday_series = weekday[jnp.arange(data_size) % 7]
-    # In case of daily data, number of lags should be 13*7.
-    if transform_function == "carryover" and transform_kwargs and "number_lags" not in transform_kwargs:
-      transform_kwargs["number_lags"] = 13 * 7
-    elif transform_function == "carryover" and not transform_kwargs:
-      transform_kwargs = {"number_lags": 13 * 7}
-
   media_transformed = numpyro.deterministic(
       name="media_transformed",
       value=transform_function(media_data,
                                custom_priors=custom_priors,
                                **transform_kwargs if transform_kwargs else {}))
-  seasonality = media_transforms.calculate_seasonality(
-      number_periods=data_size,
-      degrees=degrees_seasonality,
-      frequency=frequency,
-      gamma_seasonality=gamma_seasonality)
-  # For national model's case
-  trend = jnp.arange(data_size)
-  media_einsum = "tc, c -> t"  # t = time, c = channel
-  coef_seasonality = 1
 
-  # TODO(): Add conversion of prior for HalfNormal distribution.
-  if media_data.ndim == 3:  # For geo model's case
-    trend = jnp.expand_dims(trend, axis=-1)
-    seasonality = jnp.expand_dims(seasonality, axis=-1)
-    media_einsum = "tcg, cg -> tg"  # t = time, c = channel, g = geo
-    if weekday_seasonality:
-      weekday_series = jnp.expand_dims(weekday_series, axis=-1)
-    with numpyro.plate(name="seasonality_plate", size=n_geos):
-      coef_seasonality = numpyro.sample(
-          name=_COEF_SEASONALITY,
-          fn=custom_priors.get(
-              _COEF_SEASONALITY, default_priors[_COEF_SEASONALITY]))
-  # expo_trend is B(1, 1) so that the exponent on time is in [.5, 1.5].
+  # For national models
+  media_einsum = "tc, c -> t"  # t = time, c = channel
   prediction = (
       intercept + jnp.einsum(media_einsum, media_transformed, coef_media))
   if extra_features is not None:
@@ -473,8 +405,6 @@ def media_mix_model(
                                        coef_extra_features)
     prediction += extra_features_effect
 
-  if weekday_seasonality:
-    prediction += weekday_series
   mu = numpyro.deterministic(name="mu", value=prediction)
 
   numpyro.sample(
