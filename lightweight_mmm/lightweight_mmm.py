@@ -383,8 +383,7 @@ class LightweightMMM:
   @functools.partial(
       jax.jit,
       static_argnums=(0,),
-      static_argnames=("degrees_seasonality", "weekday_seasonality",
-                       "transform_function", "model"))
+      static_argnames=("transform_function", "model"))
   def _predict(
       self,
       rng_key: jnp.ndarray,
