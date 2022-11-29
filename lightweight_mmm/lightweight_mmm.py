@@ -65,7 +65,8 @@ _NAMES_TO_MODEL_TRANSFORMS = immutabledict.immutabledict({
     "hill_adstock": models.transform_hill_adstock,
     "adstock": models.transform_adstock,
     "carryover": models.transform_carryover,
-    'exponential_adstock': models.transform_exponential_adstock
+    'exponential_adstock': models.transform_exponential_adstock,
+    'exponential_adstock_static_dim': models.transform_exponential_adstock_static_dim
 })
 _MODEL_FUNCTION = models.media_mix_model
 
@@ -243,12 +244,13 @@ class LightweightMMM:
         custom_priors[prior_name] = default_priors[prior_name].__class__(
             **custom_priors[prior_name])
       elif not isinstance(custom_priors[prior_name], dist.Distribution):
-        raise ValueError(
-            "Priors given must be a Numpyro distribution or one of the "
-            "following to fit in the constructor of our default Numpyro "
-            "distribution. It could be given as args or kwargs as long as it "
-            "is the correct format for such object. Please refer to our "
-            "documentation on custom priors to know more.")
+        pass
+        # raise ValueError(
+        #     "Priors given must be a Numpyro distribution or one of the "
+        #     "following to fit in the constructor of our default Numpyro "
+        #     "distribution. It could be given as args or kwargs as long as it "
+        #     "is the correct format for such object. Please refer to our "
+        #     "documentation on custom priors to know more.")
     return custom_priors
 
   def fit(
