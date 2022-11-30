@@ -83,6 +83,8 @@ TRANSFORM_PRIORS_NAMES = immutabledict.immutabledict({
     "exponential_adstock":
         frozenset((_LAG_WEIGHT, _SLOPE)),
     "exponential_adstock_static_dim":
+        frozenset((_LAG_WEIGHT, _SLOPE)),
+    "exponential_adstock_static_decay":
         frozenset((_LAG_WEIGHT, _SLOPE))
 })
 
@@ -133,6 +135,11 @@ def _get_transform_default_priors() -> Mapping[str, Prior]:
                   dist.Gamma(concentration=1., rate=1.)
           }),
       "exponential_adstock_static_dim":
+          immutabledict.immutabledict({
+              _LAG_WEIGHT:
+                  dist.Beta(concentration1=2., concentration0=1.),
+          }),
+      "exponential_adstock_static_decay":
           immutabledict.immutabledict({
               _LAG_WEIGHT:
                   dist.Beta(concentration1=2., concentration0=1.),
@@ -294,6 +301,40 @@ def transform_exponential_adstock_static_dim(media_data: jnp.ndarray,
         fn=custom_priors.get(_LAG_WEIGHT,
                              transform_default_priors[_LAG_WEIGHT]))
   slope = custom_priors.get(_SLOPE, 1)
+
+  if media_data.ndim == 3:
+    lag_weight = jnp.expand_dims(lag_weight, axis=-1)
+    slope = jnp.expand_dims(slope, axis=-1)
+
+  return media_transforms.exponential(
+      data=media_transforms.adstock(
+          data=media_data, lag_weight=lag_weight, normalise=normalise),
+      slope=slope)
+
+def transform_exponential_adstock(media_data: jnp.ndarray,
+                           custom_priors: MutableMapping[str, Prior],
+                           normalise: bool = False) -> jnp.ndarray:
+  """Transforms the input data with the adstock and hill functions.
+
+  Args:
+    media_data: Media data to be transformed. It is expected to have 2 dims for
+      national models and 3 for geo models.
+    custom_priors: The custom priors we want the model to take instead of the
+      default ones. The possible names of parameters for hill_adstock and
+      exponent are "lag_weight", "half_max_effective_concentration" and "slope".
+    normalise: Whether to normalise the output values.
+
+  Returns:
+    The transformed media data.
+  """
+  transform_default_priors = _get_transform_default_priors()["exponential_adstock"]
+  lag_weight = custom_priors.get(_LAG_WEIGHT, 1)
+
+  with numpyro.plate(name=f"{_SLOPE}_plate",
+                     size=media_data.shape[1]):
+    slope = numpyro.sample(
+        name=_SLOPE,
+        fn=custom_priors.get(_SLOPE, transform_default_priors[_SLOPE]))
 
   if media_data.ndim == 3:
     lag_weight = jnp.expand_dims(lag_weight, axis=-1)

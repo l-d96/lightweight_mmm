@@ -66,7 +66,8 @@ _NAMES_TO_MODEL_TRANSFORMS = immutabledict.immutabledict({
     "adstock": models.transform_adstock,
     "carryover": models.transform_carryover,
     'exponential_adstock': models.transform_exponential_adstock,
-    'exponential_adstock_static_dim': models.transform_exponential_adstock_static_dim
+    'exponential_adstock_static_dim': models.transform_exponential_adstock_static_dim,
+    'exponential_adstock_static_decay': models.transform_exponential_adstock_static_decay
 })
 _MODEL_FUNCTION = models.media_mix_model
 
