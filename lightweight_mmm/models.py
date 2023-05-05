@@ -483,14 +483,14 @@ def media_mix_model(
       dim=-2 if media_data.ndim == 3 else -1):
     coef_media = numpyro.sample(
         name="channel_coef_media" if media_data.ndim == 3 else "coef_media",
-        fn=dist.Normal(loc=media_prior, scale=media_sigma))
+        fn=dist.Uniform(low=media_prior, high=media_sigma))
     if media_data.ndim == 3:
       with numpyro.plate(
           name="geo_media_plate",
           size=n_geos,
           dim=-1):
         coef_media = numpyro.sample(
-            name="coef_media", fn=dist.Normal(loc=media_prior, scale=media_sigma))
+            name="coef_media", fn=dist.Uniform(low=media_prior, high=media_sigma))
 
   media_transformed = numpyro.deterministic(
       name="media_transformed",
