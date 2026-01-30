@@ -78,12 +78,12 @@ def _compare_equality_for_lmmm(item_1: Any, item_2: Any) -> bool:
 
   Helper function for the __eq__ method of LightweightmMM. First checks if items
   are strings or lists of strings (it's okay if empty lists compare True), then
-  uses jnp.array_equal if the items are jax.numpy.DeviceArray or other related
+  uses jnp.array_equal if the items are jax.Array or other related
   sequences, and uses items' __eq__ otherwise.
 
   Note: this implementation does not cover every possible data structure, but
   it does cover all the data structures seen in attributes used by
-  LightweightMMM. Sometimes the DeviceArray is hidden in the value of a
+  LightweightMMM. Sometimes the Array is hidden in the value of a
   MutableMapping, hence the recursion.
 
   Args:
@@ -147,19 +147,19 @@ class LightweightMMM:
   model_name: str = "hill_adstock"
   n_media_channels: int = dataclasses.field(init=False, repr=False)
   n_geos: int = dataclasses.field(init=False, repr=False)
-  media: jnp.DeviceArray = dataclasses.field(
+  media: jax.Array = dataclasses.field(
       init=False, repr=False, hash=False, compare=True)
   media_names: Sequence[str] = dataclasses.field(
       init=False, repr=False, hash=False, compare=True)
-  trace: Dict[str, jnp.DeviceArray] = dataclasses.field(
+  trace: Dict[str, jax.Array] = dataclasses.field(
       init=False, repr=False, hash=False, compare=False)
   custom_priors: MutableMapping[str, Prior] = dataclasses.field(
       init=False, repr=False, hash=False, compare=True)
-  _media_prior: jnp.DeviceArray = dataclasses.field(
+  _media_prior: jax.Array = dataclasses.field(
       init=False, repr=False, hash=False, compare=True)
-  _extra_features: jnp.DeviceArray = dataclasses.field(
+  _extra_features: jax.Array = dataclasses.field(
       init=False, repr=False, hash=False, compare=True)
-  _target: jnp.DeviceArray = dataclasses.field(
+  _target: jax.Array = dataclasses.field(
       init=False, repr=False, hash=False, compare=True)
   _train_media_size: int = dataclasses.field(
       init=False, repr=False, hash=True, compare=False)

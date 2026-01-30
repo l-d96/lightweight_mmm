@@ -89,9 +89,8 @@ def adstock(data: jnp.ndarray,
   adstock_values = jnp.concatenate([jnp.array([data[0, ...]]), adstock_values])
   return jax.lax.cond(
       normalise,
-      lambda adstock_values: adstock_values / (1. / (1 - lag_weight)),
-      lambda adstock_values: adstock_values,
-      operand=adstock_values)
+      lambda: adstock_values / (1. / (1 - lag_weight)),
+      lambda: adstock_values)
 
 
 @jax.jit
