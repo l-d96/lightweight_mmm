@@ -25,5 +25,5 @@ pandas>=1.1.5
 scipy
 seaborn==0.11.1
 scikit-learn
-tensorflow<2.9
+tensorflow<2.16
 typing_extensions;python_version<'3.8'
