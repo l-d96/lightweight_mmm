@@ -13,7 +13,7 @@
 # limitations under the License.
 
 absl-py
-arviz==0.15.0
+arviz>=0.15.0
 dataclasses;python_version<'3.7'
 immutabledict>=2.0.0
 jax<0.5
